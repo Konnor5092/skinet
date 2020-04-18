@@ -1,4 +1,6 @@
+using API.Extensions;
 using API.Helpers;
+using API.Middleware;
 using AutoMapper;
 using Core.Interfaces;
 using Infrastructure;
@@ -21,33 +23,27 @@ namespace API
             _config = configuration;
         }
        
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<IProductRepository, ProductRepository>();
-            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddAutoMapper(typeof(MappingProfiles));
             services.AddControllers();
             services.AddDbContext<StoreContext>(x => 
                 x.UseSqlite(_config.GetConnectionString("Default")));
+
+            services.AddApplicationServices();
+            services.AddSwaggerDocumentation();
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-
+            app.UseMiddleware<ExceptionMiddleware>();
+            app.UseStatusCodePagesWithReExecute("/errors/{0}");
             // This redirects HTTP requests in the browser to HTTPS
             app.UseHttpsRedirection();
-
             app.UseRouting();
             app.UseStaticFiles();
-
             app.UseAuthorization();
-
+            app.UseSwaggerDocumention();
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
